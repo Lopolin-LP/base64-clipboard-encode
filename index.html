@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en" style="background: #000;"> <!-- The only reason this is created is because I don't want to get a flashlight for 1ms -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base64 Clipboard</title>
+    <style>
+        :root {
+            /* layout */
+            --marginW: 10vw;
+            --marginH: 10vh;
+            --border-size: max(0.5vw, 0.5vh);
+            --font-size: 16px;
+            --main-border-radius: calc(var(--font-size)*2);
+            --button-border-radius: var(--font-size);
+            --scroll-size: calc(var(--font-size)*0.75);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                /* style - lightmode */
+                --bg: #fff;
+                --text: #000;
+                --bg-hover: #aaa;
+                --text-hover: #333;
+                --bg-active: #faa;
+                --text-active: #a00;
+            }
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* style - darkmode */
+                --bg: #000;
+                --text: #fff;
+                --bg-hover: #333;
+                --text-hover: #aaa;
+                --bg-active: #600;
+                --text-active: #f00;
+            }
+        }
+        /* width */
+        ::-webkit-scrollbar {
+            width: var(--scroll-size);
+            height: var(--scroll-size);
+        }
+
+        /* Track */
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            /* box-shadow: inset calc(var(--font-size)*0.125) calc(var(--font-size)*0.125) calc(var(--font-size)*0.375) var(--text); */
+            box-shadow: inset 0 0 calc(var(--font-size)*0.25) var(--text);
+            border-radius: var(--scroll-size);
+        }
+        
+        /* Handle */
+        ::-webkit-scrollbar-thumb {
+            border-radius: var(--scroll-size);
+            background: var(--text);
+        }
+
+        /* Handle on hover */
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-hover);
+        }
+        /* Handle on active */
+        ::-webkit-scrollbar-thumb:active {
+            background: var(--text-active);
+        }
+        /* make the white box dissappear */
+        ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+        a, a:active, a:visited, a:hover {
+            color: var(--text);
+        }
+        a:hover {
+            opacity: 0.75;
+        }
+        a:active {
+            opacity: 0.5;
+        }
+        a:active:hover {
+            opacity: 0.25;
+        }
+
+        body {
+            margin: 2.5vh;
+        }
+        body, button, .theme {
+            /* style */
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: var(--font-size);
+            border-radius: var(--button-border-radius);
+        }
+        main, main > * {
+            border-radius: var(--main-border-radius) !important;
+        }
+        main {
+            /* layout */
+            position: absolute;
+            inset: var(--marginH) var(--marginW);
+            width: calc(100vw - (var(--marginW)*2));
+            height: calc(100vh - (var(--marginH)*2));
+            /* margin: var(--marginH) var(--marginW); */
+            /* overflow: hidden; */
+        }
+        nav, nav > * {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            --nav-height: max(5vh, calc(var(--font-size)*1.5));
+            height: var(--nav-height);
+            justify-content: space-between;
+        }
+        nav > *:first-child {
+            justify-content: flex-start;
+        }
+        nav > *:last-child {
+            justify-content: flex-end;
+        }
+        .theme.layout {
+            /* layout */
+            display: flex;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+        }
+        .theme.layout.alt {
+            width: calc(100% - var(--border-size)*2);
+            height: calc(100% - var(--border-size)*2);
+        }
+        .theme.layout.column {
+            flex-direction: column;
+        }
+        .theme.style {
+            /* style */
+            --style-bg: var(--bg);
+            --style-text: var(--text);
+            background: var(--style-bg);
+            color: var(--style-text);
+            border: var(--style-text) var(--border-size) solid;
+        }
+        .theme.fontsize {
+            font-size: max(5vw, 5vh);
+        }
+        .theme.borderless {
+            border: none !important;
+        }
+        .theme.borderradiusless {
+            border-radius: 0 !important;
+        }
+        button:hover, .theme.full:hover, .theme.active.hover {
+            --style-bg: var(--bg-hover);
+            --style-text: var(--text-hover);
+            /* background: var(--bg-hover);
+            color: var(--text-hover);
+            border: var(--text-hover) 0.1em solid; */
+        }
+        button:active:not(:hover), .theme.full:active:not(:hover), .theme.active {
+            --style-bg: var(--bg-hover);
+            --style-text: var(--text-hover);
+            --hover-opacity: 0.5;
+            opacity: calc(var(--hover-opacity));
+            /* background: var(--bg-hover);
+            color: var(--text-hover);
+            border: var(--text-hover) 0.1em solid; */
+        }
+        button:hover:active, .theme.full:active, .theme.active.hover {
+            --style-bg: var(--bg-active);
+            --style-text: var(--text-active);
+            --hover-opacity: 1;
+            /* background-color: var(--bg-active);
+            color: var(--text-active);
+            border: var(--text-active) 0.1em solid; */
+        }
+        nav .icon, nav button div:first-child {
+            height: var(--nav-height);
+            width: var(--nav-height);
+        }
+        nav button {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 0.5em;
+        }
+        nav button div:last-child {
+            display: none;
+            font-size: 1.2vh;
+        }
+        nav button:hover div:last-child {
+            display: block;
+            width: 10vw;
+        }
+        #result {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #string {
+            height: calc(100% - 10vh);
+            width: 100%;
+            margin: 5vh 5vw;
+            overflow: auto;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* #mimetype {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(25%, 1fr));
+            grid-auto-rows: minmax(25%, auto);
+            height: 100%;
+            width: 100%;
+        } */
+        /* #mimetype div:nth-child(5) {
+            grid-column: 1 / -1;
+        } */
+        /* #mimetype > div {
+            height: 100%;
+        } */
+        #mimetype {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+        #mimetype > div {
+            flex-grow: 1;
+            flex-basis: calc(25% - 10px);
+            box-sizing: border-box;
+        }
+        #mimetype > div > button {
+            width: 100%;
+            height: 100%;
+        }
+
+        #toast {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            inset: 1vh 0;
+            width: 50vw;
+            height: calc(100% - 2vh);
+            left: 50vw;
+            transform: translateX(-50%);
+            z-index: 2;
+            pointer-events: none;
+        }
+        #toast > div {
+            min-height: 5vh;
+            width: 100%;
+            margin: 1vh 0;
+            overflow: hidden;
+            transform: translateX(calc(var(--border-size)*-1));
+            position: relative;
+            pointer-events: all;
+        }
+        #toast > div:first-child {
+            margin-top: 0;
+        }
+        #toast > div:last-child {
+            margin-bottom: 0;
+        }
+        #toast .toast-container {
+            margin: 2vh 2vw;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+        #toast .toast-bar {
+            width: 100%;
+            height: calc(var(--font-size)*0.5);
+            background-color: var(--style-text);
+            box-shadow: inset 0 calc(var(--font-size)*0.25) calc(var(--font-size)*0.4) var(--style-bg);
+            border-top-right-radius: var(--font-size);
+            position: absolute;
+            transform: translateY(-100%);
+        }
+        #toast .toast-text {
+            padding-right: 2vh;
+        }
+        #toast .toast-closebutton, #toast .toast-closebutton svg {
+            height: 6vh;
+            width: 6vh;
+        }
+        @media (orientation: portrait) {
+            #toast {
+                width: 50vw;
+                flex-direction: column-reverse;
+            }
+            #toast > div:first-child {
+                margin-bottom: 0;
+            }
+            #toast > div:last-child {
+                margin-top: 0;
+            }
+        }
+        </style>
+    <script>
+        async function getClipboardContent() {
+            let clipboardItems = await navigator.clipboard.read();
+            let newestItem = clipboardItems[0];
+            let types = newestItem.types;
+            let allContent = [];
+            for (let i = 0; i < types.length; i++) { /* get All Content and types and put it in the array */
+                allContent.push({
+                    type: types[i],
+                    content: await newestItem.getType(types[i])
+                });
+            }
+            return allContent;
+        }
+        async function convertToBase64(clipboardContent) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    let base64data = reader.result.split(',')[1];
+                    resolve(base64data);
+                }
+                reader.onerror = reject;
+                reader.readAsDataURL(clipboardContent);
+            });
+        }
+        async function writeToClipboard(base64) {
+            navigator.clipboard.writeText(base64);
+        }
+
+        function toggleWindows(switchTo) {
+            let allWindows = ["conv", "mimetype", "result", "help", "empty"];
+            let queryWindows = new String();
+            allWindows.forEach((val, ind)=>{
+                queryWindows += "#"+val+", ";
+            })
+            queryWindows = queryWindows.slice(0, -2);
+            if (allWindows.includes(switchTo)) {
+                document.querySelectorAll(queryWindows).forEach((currentValue)=>{
+                    currentValue.style.display = "none";
+                });
+                document.querySelector("#"+switchTo).style.display = "";
+            } else {
+                console.error(switchTo, "is Invalid. Only", allWindows, "are allowed.");
+            };
+        }
+
+        const settings_available = ["copy", "close", "select"];
+        let settings_stats = {
+            copy: JSON.parse(localStorage.getItem("b64clip_copy")) ?? true,
+            close: JSON.parse(localStorage.getItem("b64clip_close")) ?? true,
+            select: JSON.parse(localStorage.getItem("b64clip_select")) ?? false
+        };
+        let setting_icons = {
+            copy: [`<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copy" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" />
+  <path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" />
+</svg>`, `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copy-off" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M19.414 19.415a2 2 0 0 1 -1.414 .585h-8a2 2 0 0 1 -2 -2v-8c0 -.554 .225 -1.055 .589 -1.417m3.411 -.583h6a2 2 0 0 1 2 2v6" />
+  <path d="M16 8v-2a2 2 0 0 0 -2 -2h-6m-3.418 .59c-.36 .36 -.582 .86 -.582 1.41v8a2 2 0 0 0 2 2h2" />
+  <path d="M3 3l18 18" />
+</svg>`],
+            close: [`<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M5 12l-2 0l9 -9l9 9l-2 0" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>`, `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home-off" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M5 12h-2l4.497 -4.497m2 -2l2.504 -2.504l9 9h-2"></path>
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2m0 -4v-3"></path>
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2m2 2v6"></path>
+  <path d="M3 3l18 18"></path>
+</svg>`],
+            select: [`<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-select-all" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M8 8m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" />
+  <path d="M12 20v.01" />
+  <path d="M16 20v.01" />
+  <path d="M8 20v.01" />
+  <path d="M4 20v.01" />
+  <path d="M4 16v.01" />
+  <path d="M4 12v.01" />
+  <path d="M4 8v.01" />
+  <path d="M4 4v.01" />
+  <path d="M8 4v.01" />
+  <path d="M12 4v.01" />
+  <path d="M16 4v.01" />
+  <path d="M20 4v.01" />
+  <path d="M20 8v.01" />
+  <path d="M20 12v.01" />
+  <path d="M20 16v.01" />
+  <path d="M20 20v.01" />
+</svg>`, `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-deselect" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M12 8h3a1 1 0 0 1 1 1v3" />
+  <path d="M16 16h-7a1 1 0 0 1 -1 -1v-7" />
+  <path d="M12 20v.01" />
+  <path d="M16 20v.01" />
+  <path d="M8 20v.01" />
+  <path d="M4 20v.01" />
+  <path d="M4 16v.01" />
+  <path d="M4 12v.01" />
+  <path d="M4 8v.01" />
+  <path d="M8 4v.01" />
+  <path d="M12 4v.01" />
+  <path d="M16 4v.01" />
+  <path d="M20 4v.01" />
+  <path d="M20 8v.01" />
+  <path d="M20 12v.01" />
+  <path d="M20 16v.01" />
+  <path d="M3 3l18 18" />
+</svg>`]
+        }
+        function iconSwitch(which, state) {
+            if (settings_available.includes(which) === false) {
+                console.error("iconSwitch icon doesn't exist. please only use the ones available within", settings_available);
+                return false;
+            }
+            let stateBin;
+            if (state === true) { /* Please don't question why true may ever equal 0. */
+                stateBin = 0;
+            } else if (state === false) {
+                stateBin = 1;
+            } else {
+                console.error("iconSwitch state was not type of boolean.");
+                return true;
+            }
+            console.log("iconSwitch: ", which, state, stateBin);
+            try {
+                document.querySelector("#"+which+" > div:first-child").innerHTML = setting_icons[which][stateBin];
+            } catch(err) {
+                console.error("iconSwitch failed:", err);
+            }
+        }
+        function settingsSwitch(option, state) {
+            if (settings_available.includes(option) === false) {
+                return false;
+            }
+            if (typeof state === "boolean") {
+                settings_stats[option] = state; /* Change setting to new value */
+                iconSwitch(option, state); /* change icon */
+            } else {
+                let setTo = !settings_stats[option];
+                settings_stats[option] = setTo; /* change setting to opposite */
+                iconSwitch(option, setTo); /* change icon accordingly */
+            }
+        }
+        async function processSettings() {
+            let elm = document.querySelector("#string");
+            if (settings_stats.select === true) {
+                // https://stackoverflow.com/a/987376
+                const node = elm;
+                if (document.body.createTextRange) {
+                    const range = document.body.createTextRange();
+                    range.moveToElementText(node);
+                    range.select();
+                } else if (window.getSelection) {
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(node);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } else {
+                    console.warn("Could not select text in node: Unsupported browser.");
+                }
+            }
+            if (settings_stats.copy === true) {
+                // Write the base64 string back to clipboard
+                await writeToClipboard(elm.innerText);
+            }
+            if (settings_stats.close === true) {
+                toggleWindows("conv");
+            }
+        };
+        window.onload = function() {
+            /* Make Button Work */
+            try {
+                document.querySelector("#conv").addEventListener("click", processClipboardContentPart1);
+            } catch(err) {
+                console.warn("Functionality of Website Sacrificed. Main Button does not work if EventListener is not added manually.");
+                console.warn("stacktrace:", err);
+            }
+            /* Make Settings do Something */
+            try {
+                document.querySelector("#string").addEventListener("click", processSettings);
+            } catch(err) {
+                console.warn("Functionality of Website Sacrificed. Main Button does not work if EventListener is not added manually.");
+                console.warn("stacktrace:", err);
+            }
+            /* Update Icons */
+            try {
+                iconSwitch("copy", settings_stats.copy);
+                iconSwitch("close", settings_stats.close);
+                iconSwitch("select", settings_stats.select);
+            } catch(err) {
+                console.warn("icons couldn't fully be switched! Icons may not appear at all!");
+                console.warn("stacktrace:", err);
+            }
+        }
+        window.onbeforeunload = function() {
+            // save settings
+            localStorage.setItem("b64clip_copy", settings_stats.copy);
+            localStorage.setItem("b64clip_close", settings_stats.close);
+            localStorage.setItem("b64clip_select", settings_stats.select);
+        }
+        function mimeTypeChoice(mimeArray, callback) {
+            if (typeof callback !== "function") {
+                console.error("callback is not type of function. Code not executed. callback was", typeof callback, ". Please Review value:", callback);
+                return;
+            }
+            document.querySelector("#mimetype").innerHTML = "";
+            for (let i = 0; i < mimeArray.length; i++) {
+                let button = document.createElement("button");
+                button.classList.add("theme", "full", "style");
+                button.innerText = mimeArray[i];
+                button.addEventListener("click", function() {
+                    callback(i);
+                });
+                let parent = document.createElement("div");
+                parent.appendChild(button);
+                document.querySelector("#mimetype").appendChild(parent);
+            }
+            if (mimeArray.length === 1) {
+                console.log("Only one MIME Type present, skipping selection screen");
+                document.querySelector("#mimetype > div > button").click();
+            } else {
+                toggleWindows("mimetype");
+            }
+        }
+        function randomChars(length) { /* https://stackoverflow.com/a/1349426 */
+            let result = '';
+            // const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            // querySelector no like numbers
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            const charactersLength = characters.length;
+            let counter = 0;
+            while (counter < length) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+                counter += 1;
+            }
+            return result;
+        }
+        var makeToastTimeoutIDs = {};
+        async function makeToast(content, duration, error) {
+            // content: string, contains text to be displayed.
+            // duration: 0 for default, negative for permanent and else in milliseconds.
+            // error: boolean, if it should appear in red or not.
+            const str = randomChars(64);
+            /* parent, contains functions and styles */
+            let elm = document.createElement("div");
+            elm.id = str;
+            elm.classList.add("theme", "style");
+            if (error === true) { /* if on error, the active style should be shown */
+                elm.classList.add("active", "hover");
+            }
+
+            if (duration === 0) {
+                duration = 5000; /* default duration */
+            }
+
+            /* text, simply contains text, it's padding and the close button */
+            let container = document.createElement("div");
+            container.classList.add("toast-container");
+            
+            let text = document.createElement("div");
+            text.classList.add("toast-text");
+            text.innerText = content;
+
+            let closebutton = document.createElement("div");
+            closebutton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--style-text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M18 6l-12 12" />
+    <path d="M6 6l12 12" />
+</svg>`
+            closebutton.classList.add("theme", "style", "full", "button", "toast-closebutton");
+            // Code moved lower
+            // closebutton.onclick = function(){
+            //     document.querySelector("#"+str).remove();
+            // };
+            
+            /* the loading bar */
+            let bar = document.createElement("div");
+            bar.classList.add("toast-bar");
+            bar.style.transition = "transform "+duration+"ms ease-in-out";
+            bar.style.transform = "translateY(-100%)"
+
+            /* execute countdown as soon as it's appended - generated using phind.com cuz omfg I am way too small brain for that */
+            let targetElement = document.querySelector("#toast"); // target element's id
+            let observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                let newElement = document.querySelector("#"+str); // the new element we're searching for
+                if (newElement) {
+                    // Execute your code here
+                    console.log('Our Toast detected in DOM. Applying Countdown styling...');
+                    setTimeout(function(){newElement.querySelector(".toast-bar").style.transform += "translateX(-100%)"}, 10) /* we already have the observer to check if it's in the dom. yet here we are applying yet another hack simply because IT WILL NOT APPLY THE FUCKING TRANSITION YOU BASTARD AAAAAAAAAAAAAAAAAAAAAAAA */
+                    /* set duration in js */
+                    if (duration >= 0) {
+                        makeToastTimeoutIDs[str] = setTimeout(function(){
+                            document.querySelector("#"+str).remove();
+                        }, duration);
+                        console.log("delay added");
+                    }
+
+                    console.log("Styles successfully set.");
+                    // Disconnect the observer
+                    observer.disconnect();
+                }
+                }
+            });
+            });
+            // Configuration of the observer
+            let config = { childList: true };
+            // Pass in the target node, as well as the observer options
+            observer.observe(targetElement, config);
+
+            closebutton.onclick = function(){
+                document.querySelector("#"+str).remove();
+                try {
+                    clearTimeout(makeToastTimeoutIDs[str]);
+                } catch(err) {
+                    console.warn("Failed to remove timeout of Toast. Please Ignore a soon appearing \"Uncaught TypeError: Cannot read properties of null (reading 'remove')\" error.");
+                    console.warn("stacktrace:", err);
+                }
+            };
+
+            /* bring it all together and append it */
+            container.appendChild(text);
+            container.appendChild(closebutton);
+            elm.appendChild(container);
+            elm.appendChild(bar);
+            await document.querySelector("#toast").appendChild(elm);
+        }
+        let availableTypes = [];
+        let correspondingContent = [];
+        let clipboardContent;
+        let mainButtonDeactivated = false;
+        async function processClipboardContentPart1() {
+            if (mainButtonDeactivated === true) {
+                console.warn("Button Temporarily Deactivated. Button Execution not triggered");
+                return;
+            }
+            let clipboardContentAccessed = false;
+            try {
+                // Reset old data
+                availableTypes = [];
+                correspondingContent = [];
+                // Disable Button to prevent more problems
+                mainButtonDeactivated = true;
+                // Get the newest item and its type from clipboard
+                clipboardContent = await getClipboardContent();
+                clipboardContentAccessed = true;
+                
+                if (clipboardContent.length === 0) {
+                    toggleWindows("empty");
+                    document.querySelector("#empty").innerText = "The Clipboard is empty. Please copy something to the Clipboard.";
+                    return;
+                }
+                clipboardContent.forEach((currentValue)=>{
+                    availableTypes.push(currentValue.type);
+                    correspondingContent.push(currentValue.content);
+                });
+                mimeTypeChoice(availableTypes, processClipboardContentPart2);
+            } catch(error) {
+                // If an error occurs, log it
+                console.error('An error occurred:', error);
+                if (clipboardContentAccessed === false) {
+                    makeToast("Clipboard access declined.", 0, false);
+                } else {
+                    makeToast("An error occured." + error, -1, true);
+                }
+            }
+            // Reactivate button if something else goes wrong the page doesn't have to be reloaded
+            mainButtonDeactivated = false;
+        }
+        async function processClipboardContentPart2(arrnr) {
+            // Convert the content to a base64 string
+            let base64Content = await convertToBase64(correspondingContent[arrnr]);
+            console.log(base64Content);
+            
+            // Write the base64 string back to clipboard
+            // await writeToClipboard(base64Content);
+    
+            toggleWindows("result");
+            document.querySelector("#string").innerText = base64Content;
+            makeToast("Converted MIME Type", availableTypes[arrnr], "to base64 successfully.", 0);
+        }
+
+        // TODO:
+        // X Give Selection Dialog about which MIME Type of the content you would choose. (for a discord image copied from Opera GX it gave me a link and an img)
+        // X Border Radius
+        // - Make the copy functions and settings work
+        // X ...and save
+        // - Show a Toast banner at top of screen containing the MIME Type, or an error if it exists. (or bottom if the screen width is too small compared to screen height, as icon size depends on height)
+    </script>
+    <!--
+        PLEASE UPDATE LORD IT'S VERY OUTDATED
+        A Short Documentation on the different Functions:
+        
+        CLIPBOARD AND CONVERSION
+        getClipboardContent()       - get the latest clipboard content
+        convertToBase64(blob)       - converts the blob input to a base64 string
+        writeToClipboard(input)     - writes the input to clipboard
+        
+        UI AND SETTINGS
+        toggleWindows(window)       - Toggle Between different Main's. The Initiate Button, Help Menu and Result. Only Valid Values are: "conv", "result" and "help"
+        settings_available          - Array containing all Valid Settings that work. used to confirm if the setting being switched is valid.
+        settings_stats              - Current Settings Status.
+        setting_icons               - Contains the SVG HTML for the Displayed Icons.
+        iconSwitch(which, state)    - Switches the Icon for the Settings Buttons
+        settingsSwitch(option, state) - Changes the settings_stats for the specified setting. It also changes the according Icon. the state is optional. No State will toggle.
+        
+        EXECUTION
+        processClipboardContent()   - combines the three functions in CLIPBOARD AND CONVERSION and more to give the user an automated experience
+    -->
+</head>
+<body>
+    <nav>
+        <div><!-- Settings: Disable Auto-Close on successful copy to clipboard. Disable auto-full select on click. Disable auto copy on click. -->
+            <button id="copy" onclick="settingsSwitch('copy')" class="theme full style borderless">
+                <div></div>
+                <div>Automatically Copy Text as soon as it's selected</div>
+            </button>
+            <button id="close" onclick="settingsSwitch('close')" class="theme full style borderless">
+                <div></div>
+                <div>Closes if all text has been auto-selected and copied. If not, auto close after 5 seconds.</div>
+            </button>
+            <button id="select" onclick="settingsSwitch('select')" class="theme full style borderless">
+                <div></div>
+                <div>Selects all Text as soon as the Result window is clicked.</div>
+            </button>
+        </div>
+        <div>
+            <button id="home" onclick="toggleWindows('help')" class="theme full style borderless">
+                <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-help-circle" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+                        <path d="M12 16v.01" />
+                        <path d="M12 13a2 2 0 0 0 .914 -3.782a1.98 1.98 0 0 0 -2.414 .483" />
+                    </svg>
+                </div>
+                <div>Go back to Main Menu</div>
+            </button>
+            <button id="home" onclick="toggleWindows('conv')" class="theme full style borderless">
+                <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--text)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M18 6l-12 12" />
+                        <path d="M6 6l12 12" />
+                    </svg>
+                </div>
+                <div>Go back to Main Menu</div>
+            </button>
+        </div>
+    </nav>
+    <div id="toast"></div>
+    <main>
+        <button id="conv" class="theme full fontsize style layout">Click to convert Clipboard to base64.</button>
+        <div id="mimetype" class="theme layout style borderless" style="display: none; border-radius: 0 !important;"> <!-- class "alt" was removed due to "borderless" -->
+            <!-- <div>
+                <button class="theme full style layout">Hello</button>
+            </div>
+            <div>
+                <button class="theme full style layout">Hello</button>
+            </div>
+            <div>
+                <button class="theme full style layout">Hello</button>
+            </div>
+            <div>
+                <button class="theme full style layout">Hello</button>
+            </div>
+            <div>
+                <button class="theme full style layout">Hello</button>
+            </div>
+            <div>
+                <button class="theme full style layout">Hello</button>
+            </div> -->
+        </div>
+        <div id="result" class="theme layout alt style full" style="display: none;">
+            <div id="string"></div>
+        </div>
+        <div id="help" class="theme hover alt style layout column" style="display: none;">
+            <div style="margin: 5vh 5vw; overflow-y: scroll;">
+                <div style="padding-right: 2em;">
+                    <h1>How to use</h1>
+                    <h2>Quick Start</h2>
+                    <p>Just click the button. That's it.</p>
+                    <h2>MIME Types</h2>
+                    <p>As soon as you try to use this tool for the first time you may notice that some cryptic text (eg. image/png) is shown and you have to decide between one of them.</p>
+                    <p>Those are "MIME Types". A MIME Type tells the browser with what type of data it's dealing with. When reading the clipboard, one element may have multiple MIME Types and thus multiple contents which are completely different from one another. Usually by reading what it says and using something so called "thinkging with your brain" you can figure out what you actually want to convert.</p>
+                    <p>I noticed that when I copy an image out of my browser it always has a data/text MIME Type as well as the image itself. That text is the URL of it, for some reason. At least that's what happens in Opera GX.</p>
+                    <h1>My Browser always hangs!</h1>
+                    <p>All calculation is being done in your browser, so stutters during reading out and displaying all data may take a while.</p>
+                    <h1>How does it work</h1>
+                    <p><ol>
+                        <li>Get user's clipboard</li>
+                        <li>Let user choose MIME Type or if it's just one auto-select it</li>
+                        <li>Convert it by reading it. Yes, it's already base64.</li>
+                        <li>Spit out info to user, make a toast and make settings do stuff.</li>
+                    </ol></p>
+                    <h1>Is it offline?</h1>
+                    <p>Yup, all code is within one HTML file for complete offline use. All within 40kb.</p>
+                    <h1>Why did you create this?</h1>
+                    <p>I was furiously trying to simply convert images from Discord to base64 to implement them in a private (now umaintaned) website. It annoyed me that I had to download it, reupload to a different site, re-download, open the txt and finally paste it in. Just too much, so I created this.</p>
+                    <h1>Can I make it run my own JavaScript Code for my personal use other than converting to base64?</h1>
+                    <p>Theoretically, yes. The Problem is actually understanding how any of this works. It's kinda straight forward, but not really, but I'll add a way to execute custom code at some point if I get around to actually do it. Currently this fulfills all my needs. You may open a pull-request adding support for it.</p>
+                    <h1>Were any assets used?</h1>
+                    <p>Icons were taken with care from <a href="https://tablericons.com" target="_blank">tablericons.com</a>. Some code was taking from StackOverflow (with credits inside source-code comments) and some assistance was given by <a href="https://phind.com/" target="_blank">phind.com</a>. Everything else is created by me and contributors.</p>
+                    <h1>Documentation?</h1>
+                    <p><i>Last known location: Hell</i></p>
+                    <br><hr><br>
+                    <div style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
+                        <div>Created by <a href="https://linktr.ee/Lopolin" target="_blank">Lopolin</a></div>
+                        <div>V 1.0</div>
+                        <div>A small personal Project</div>
+                    </div>
+                    <br>
+                    <div>This Project is Licensed under the GNU General Public License. You should have received a copy if it when you downloaded this program. If not, please see <a href="http://www.gnu.org/licenses" target="_blank">http://www.gnu.org/licenses</a>.</div>
+                    </div>
+                </div>
+            </div>
+        <div id="empty" class="theme hover alt style layout column" style="display: none;"></div>
+    </main>
+</body>
+</html>
