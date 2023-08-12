@@ -23,13 +23,14 @@ FAQ is inside the HTML itself, hidden within the help menu.
 ### QoL
 - [ ] Make the help menu more useful
 - [ ] Make the help menu explain the settings aswell
-- [ ] Not burn your eyes while the big button flashes red
+- [ ] Improve mobile experience
+- [ ] Easier access to a link to report issues.
 
 ### UI / UX
 - [ ] maybe some better design
 - [ ] allow changing of color pallette (imagine if browser could use material you)
 - [ ] An Icon.
-- [ ] Improve mobile experience
+- [ ] Not burn your eyes while the big button flashes red
 
 ## License
 GPLv3. Deal with it.
