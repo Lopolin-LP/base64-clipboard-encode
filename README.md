@@ -6,6 +6,7 @@ FAQ is inside the HTML itself, hidden within the help menu.
 - Encode the most recent item in your clipboard into base64
 - you can choose which (MIME) Type to use, if multiple are available
 - Copy the encoded base64 string back to your clipboard
+- works on mobile, but not in Mobile Opera GX for some odd reason.
 - ...all within the most goofy aah UI design you can imagine
 - automate selecting all text of the result
 - automate copying the result
