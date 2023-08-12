@@ -24,7 +24,7 @@ FAQ is inside the HTML itself, hidden within the help menu.
 - [ ] Make the help menu explain the settings aswell
 - [ ] Not burn your eyes while the big button flashes red
 
-###UI / UX
+### UI / UX
 - [ ] maybe some better design
 - [ ] allow changing of color pallette (imagine if browser could use material you)
 - [ ] An Icon.
